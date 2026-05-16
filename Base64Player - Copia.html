@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Player Base64 - Teste Local</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #ccc; padding: 20px; text-align: center; }
+        .player-card { max-width: 600px; margin: 30px auto; background: #141414; padding: 20px; border: 1px solid #333; border-radius: 8px; box-shadow: 0 0 15px rgba(0,255,65,0.1); }
+        h1 { font-size: 16px; color: #00ff41; margin-bottom: 20px; }
+        textarea { width: 100%; height: 150px; background: #000; color: #00ff41; border: 1px solid #444; border-radius: 4px; padding: 10px; font-size: 10px; resize: none; box-sizing: border-box; margin-bottom: 15px; }
+        input { width: 100%; padding: 10px; background: #000; color: #00ff41; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px; font-size: 11px; }
+        .grid-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { background: #222; color: #fff; border: 1px solid #00ff41; padding: 12px; cursor: pointer; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        button:hover { background: #00ff41; color: #000; }
+        audio { width: 100%; margin-top: 20px; display: none; }
+        .status { margin-top: 15px; font-size: 11px; color: #ffbf00; min-height: 15px; word-break: break-all; }
+    </style>
+</head>
+<body>
+
+<div class="player-card">
+    <h1>[SUPER TEST PLAYER BASE64]</h1>
+    
+    <!-- Opção 1: Colar direto -->
+    <textarea id="txtArea" placeholder="OPÇÃO A: Cole todo o código Base64 (SUQz... ou data:audio...) diretamente aqui"></textarea>
+    
+    <!-- Opção 2: Puxar de link (ex: Gist Raw) -->
+    <input type="text" id="streamUrl" placeholder="OPÇÃO B: Ou cole o link direto (RAW) do arquivo TXT">
+    
+    <div class="grid-btn">
+        <button onclick="processarTextoDireto()">⚡ RODAR TEXTO COLADO</button>
+        <button onclick="conectarELerLink()">🌐 RODAR VIA LINK</button>
+    </div>
+    
+    <div id="statusMsg" class="status">Aguardando dados para o teste...</div>
+    
+    <audio id="meuAudio" controls></audio>
+</div>
+
+<script>
+    // Função principal: Transforma o texto bruto em um arquivo binário virtual (Blob)
+    function iniciarAudioDoTexto(textoBruto) {
+        const status = document.getElementById('statusMsg');
+        const player = document.getElementById('meuAudio');
+        
+        // 1. Limpa espaços, quebras de linha e retornos de carro que quebram o Base64
+        let stringLimpa = textoBruto.replace(/\s/g, '');
+
+        // 2. Remove o cabeçalho "data:...base64," se ele existir para isolar o código puro
+        if (stringLimpa.includes("base64,")) {
+            stringLimpa = stringLimpa.split("base64,")[1];
+        }
+
+        try {
+            status.innerText = "Convertendo string em binário de áudio...";
+            
+            // 3. Decodifica a string Base64 string em caracteres binários
+            const caracteresBinarios = atob(stringLimpa);
+            const arrayDeBytes = new Uint8Array(caracteresBinarios.length);
+            
+            // 4. Preenche o array de bytes mapeando cada caractere
+            for (let i = 0; i < caracteresBinarios.length; i++) {
+                arrayDeBytes[i] = caracteresBinarios.charCodeAt(i);
+            }
+            
+            // 5. Cria um arquivo virtual limpo do tipo audio/mpeg
+            const blobAudio = new Blob([arrayDeBytes], { type: 'audio/mpeg' });
+            const urlFinal = URL.createObjectURL(blobAudio);
+            
+            // 6. Alimenta o player
+            player.src = urlFinal;
+            player.style.display = "block";
+            player.play();
+            status.innerText = "▶️ Tocando áudio processado com sucesso!";
+            
+        } catch (erro) {
+            console.error(erro);
+            status.innerText = "❌ Erro de decodificação! O texto colado não é um Base64 válido ou está incompleto.";
+        }
+    }
+
+    // Gatilho para a Opção A (Caixa de texto)
+    function processarTextoDireto() {
+        const texto = document.getElementById('txtArea').value.trim();
+        if(!texto) {
+            document.getElementById('statusMsg').innerText = "Insira o texto antes de rodar.";
+            return;
+        }
+        iniciarAudioDoTexto(texto);
+    }
+
+    // Gatilho para a Opção B (Link externo)
+    function conectarELerLink() {
+        const urlInput = document.getElementById('streamUrl').value.trim();
+        const status = document.getElementById('statusMsg');
+        
+        if(!urlInput) {
+            status.innerText = "Insira um link válido.";
+            return;
+        }
+
+        status.innerText = "Buscando arquivo de texto na nuvem...";
+
+        fetch(urlInput)
+            .then(resposta => {
+                if (!resposta.ok) throw new Error("Erro ao acessar a URL.");
+                return resposta.text();
+            })
+            .then(textoBaixado => {
+                iniciarAudioDoTexto(textoBaixado);
+            })
+            .catch(erro => {
+                console.error(erro);
+                status.innerText = "❌ Falha ao ler o link. Lembre-se que links comuns do Google Drive são bloqueados pelo navegador.";
+            });
+    }
+</script>
+
+</body>
+</html>
